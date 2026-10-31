@@ -1,9 +1,10 @@
-# LearnFlow Recovery — milestones 1 and 2
+# LearnFlow Recovery — milestones 1–3
 
 A local, synthetic learning platform for an AI hackathon. This milestone provides
 the backend evidence-to-progress pipeline, reproducible developer scenarios,
-diagnostics, verification, and controlled recovery. No AI agent, frontend, real student
-data, or runtime external services are included.
+diagnostics, verification, controlled recovery, and an opt-in OpenAI investigation
+agent. All students are synthetic. There is no frontend. Only opted-in agent
+investigations use an external service; the backend and routine tests run locally.
 
 ## Setup and run
 
@@ -162,7 +163,147 @@ without resetting its data before using the tools:
 Do not register the scenario runner, seed/reset, simulator ingestion, test files,
 or arbitrary filesystem/SQL access for the future recovery agent. The local
 Python process itself is not a security sandbox; the next milestone must enforce
-that tool allowlist and filesystem/database permissions in its host.
+that tool allowlist and filesystem/database permissions in its host. Milestone 3
+now enforces the model tool allowlist and binds scope in application code; it does
+not sandbox a human running Python or expose filesystem access to the model.
+
+## Milestone 3: configuration
+
+Update dependencies, then copy the example only if `.env` does not already exist:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+Copy-Item .env.example .env
+```
+
+Edit `.env` **locally in your editor**. Replace `OPENAI_API_KEY` with your own key
+and `OPENAI_MODEL` with `gpt-5.4-mini` or another accessible Responses model
+supporting function calling and structured outputs. Do not paste keys into chat,
+source code, commands, screenshots, or Git. `.env` and `.env.*` are ignored;
+`.env.example` has placeholders and optional budget defaults only. No key is
+provided or created. Environment variables take precedence over the selected
+local file; there is no parent-directory search or variable interpolation.
+
+As checked on October 31, 2026, official documentation lists
+[`gpt-5.4-mini`](https://developers.openai.com/api/docs/models/gpt-5.4-mini) as an
+economical model supporting Responses, function calling, and structured outputs.
+Access and billing depend on your OpenAI project. `OPENAI_MODEL` is required;
+the agent does not hardcode a model.
+
+| Optional environment setting | Default | Range |
+| --- | --- | --- |
+| `LEARNFLOW_MAX_TURNS` | 10 | 1–50 model requests |
+| `LEARNFLOW_MAX_TOOL_CALLS` | 20 | 1–100 requested tools, including rejected calls |
+| `LEARNFLOW_MAX_REPAIRS` | 1 | 0–5 dispatched recovery attempts |
+| `LEARNFLOW_REQUEST_TIMEOUT` | 30 | More than 0, at most 120 seconds |
+| `LEARNFLOW_MAX_OUTPUT_TOKENS` | 4096 | 256–16384 per response, including reasoning tokens |
+
+SDK retries are disabled. These ceilings are not a guaranteed dollar budget.
+The timeout is the SDK network timeout, not an investigation-wide wall-clock
+deadline. SQLite retains its bounded lock wait. Keep limits low for first checks.
+
+## Milestone 3: run and inspect an investigation
+
+No server is required. Choose **one** developer setup (each destroys and replaces
+the entire selected demo database):
+
+```powershell
+.\.venv\Scripts\python.exe -m learnflow.scenarios setup missed-processing --db demo.sqlite3
+.\.venv\Scripts\python.exe -m learnflow.scenarios setup partial-update --db demo.sqlite3
+.\.venv\Scripts\python.exe -m learnflow.scenarios setup healthy-control --db demo.sqlite3
+```
+
+After one setup, run a live, potentially paid investigation. Supply the reported
+symptom without passing any scenario label or expected answer to the agent:
+
+```powershell
+.\.venv\Scripts\python.exe -m learnflow.agent_cli investigate --allow-paid --db demo.sqlite3 --student 1 --course 1 --symptom "My next lesson is locked. Please investigate the available evidence."
+```
+
+The command prints a structured report and `.traces/<run-id>.jsonl` path. Replace
+`<run-id>` with its actual printed value to inspect the trace; inspect resulting
+progress and milestone 2 recovery audits using the existing tools:
+
+```powershell
+.\.venv\Scripts\python.exe -m learnflow.agent_cli trace --file .traces/<run-id>.jsonl
+.\.venv\Scripts\python.exe -m learnflow.tools inspect --db demo.sqlite3 --student 1 --course 1
+.\.venv\Scripts\python.exe -m learnflow.tools verify --db demo.sqlite3 --student 1 --course 1
+```
+
+`--trace-file` optionally selects a new trace path; existing files are never
+overwritten. `--env-file` selects another local configuration file. Use `--db`
+explicitly for controlled checks (the default is the process `LEARNFLOW_DB` or
+`learnflow.sqlite3`). Trace reading is offline.
+
+The next small **opt-in live smoke check** can be run with:
+
+```powershell
+.\.venv\Scripts\python.exe -m learnflow.scenarios setup missed-processing --db smoke.sqlite3
+.\.venv\Scripts\python.exe -m learnflow.agent_cli live-smoke --allow-paid --db smoke.sqlite3 --student 1 --course 1 --symptom "Please investigate why my next lesson is locked."
+.\.venv\Scripts\python.exe -m learnflow.tools verify --db smoke.sqlite3 --student 1 --course 1
+```
+
+`live-smoke` is an explicitly opted-in alias for the same bounded investigation,
+not a canned success test: it neither injects faults nor knows expected answers.
+**No paid live calls were run during implementation.** Mocked tests establish
+orchestration behavior, not live judgment, cost, latency, or account/model access.
+Exit code 0 indicates supported `recovered`/`no_fault_found`; escalation or execution
+failure returns 1; CLI argument errors (including missing `--allow-paid`) return 2.
+
+## Milestone 3: workflow, safety, report, and trace
+
+`agent.py` owns provider-independent orchestration. `openai_provider.py` alone
+uses the official SDK and Responses API following OpenAI's
+[function-calling guide](https://developers.openai.com/api/docs/guides/function-calling)
+and [structured-output guide](https://developers.openai.com/api/docs/guides/structured-outputs).
+It sends function outputs back by call ID and keeps response items in memory
+for multi-turn continuity. With `store=False`, opaque reasoning continuation is
+carried only in memory and never logged. No hidden chain-of-thought is requested.
+`store=False` does not override applicable provider data policies: opted-in runs
+send the symptom and scoped tool results to OpenAI.
+
+The real model chooses its investigations and repair requests. There are no
+scenario-to-action mappings. Only `inspect`, `verify`, and `recover` are exposed.
+Every function takes exactly `{}`, using a strict schema validated locally.
+Student/course/database scope is bound by the host outside model control. No
+tool exposes source writes, SQL, shell, source browsing, scenarios, test answers,
+credentials, repository uploads, or database uploads. All tool calls execute
+sequentially, even if a model returns a batch despite parallel calls being disabled.
+Symptoms and strings in diagnostic/log results are untrusted data.
+
+Recovery is dispatched only after inspection and mismatching verification.
+Invalid arguments, unknown tools and tool failures return structured errors
+within the bounded loop. API errors or incomplete responses stop safely; exhausted
+budgets escalate without inferring success. Recovery continues to use milestone 2
+logic and its existing audit trail, preserving source rows and unrelated scope.
+
+The final report contains status (`recovered`, `no_fault_found`, `escalated`, or
+`execution_failed`), evidence references, concise diagnosis, host-recorded actions
+and audit IDs, verification result, remaining limitations, and recommended next
+steps. Evidence references identify actual trace tool results (e.g. `tool-0001`).
+`recovered` requires a successful changed recovery and subsequent passing verification
+with inspection/repair/verification references. `no_fault_found` requires inspection,
+passing verification and no dispatched repair. Unsupported success claims are
+downgraded and fabricated references rejected. Host actions and verification fields
+never come from model assertions. Diagnosis prose remains model-generated and
+should be reviewed against the evidence. A failed quiz never becomes earned completion.
+
+`reported_symptom_resolved` is always `null`: consistency does not establish that
+an external complaint (browser display, notifications, etc.) was resolved. The
+report always states this observability limitation, even after a valid recovery.
+
+Append-only JSONL traces contain scope, validated arguments, tool names/results,
+error codes, timings, token usage when available, and final status. Intent is
+flushed before mutations. Raw invalid arguments, prompts, API errors, keys, and
+hidden reasoning are not recorded. Configured credentials and API-key patterns
+are redacted from sent symptoms, tool results, reports and traces. Default traces
+are ignored by Git. Recovery audit IDs connect trace actions to SQLite records.
+
+Traces and database audits are not an atomic cross-file transaction or tamper-proof
+records. If trace writing fails after a repair, inspect the audit and verify the
+database; the CLI reports execution failure. A crash may leave an intent without
+a result. Verification is a point-in-time snapshot; concurrent changes can make
+it stale. The host provides tool isolation, not a sandbox for arbitrary local Python.
 
 ## Tests
 
@@ -176,6 +317,15 @@ prerequisites, unprocessed evidence, student isolation, validation, and reset.
 Milestone 2 tests assert explicit progress values and mismatches for all scenarios,
 recovery, source preservation, student/course isolation, no-op audits, rollback,
 missing progress rows, prerequisite enforcement, and repeatable scenario setup.
+Milestone 3 adds scripted-model orchestration tests, mocked official SDK HTTP
+transport tests, and configuration/CLI tests. They cover repair/verification,
+healthy failed quizzes, invalid/out-of-scope arguments, unknown tools, budgets,
+operational failures, unsupported success, evidence preservation and isolation.
+Routine tests require no credentials and never call a live model. No paid pytest
+test is auto-discovered; use the explicit `live-smoke --allow-paid` CLI when ready.
+Implementation validation: **63 local tests passed**, including all 20 existing
+milestone 1/2 tests. The installed Starlette/httpx combination emits one existing
+test-client deprecation warning. This is not a live-model evaluation result.
 
 ## Remaining limitations
 
@@ -185,7 +335,8 @@ deployment hardening. Quiz scores are synthetic inputs, not a quiz grading
 service. SQLite and full student projection recalculation suit this small demo.
 The simulator trusts callers to submit source evidence; future recovery-agent
 access must be narrower than simulator ingestion access. See AGENTS.md for
-mandatory recovery boundaries. No LLM integration, hidden evaluation datasets,
-agent orchestration, or frontend is included. Verification and processing share
+mandatory recovery boundaries. Live model behavior remains unverified until the
+opt-in smoke check is run. No hidden evaluation datasets or frontend is included.
+Verification and processing share
 the deterministic rule implementation; tests supply independent explicit expected
 outcomes. Logs are local operational records, not tamper-proof external audits.
