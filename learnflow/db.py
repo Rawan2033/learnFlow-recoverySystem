@@ -45,13 +45,26 @@ def initialize(path):
             eligible INTEGER NOT NULL DEFAULT 0,
             completed INTEGER NOT NULL DEFAULT 0,
             PRIMARY KEY(student_id, lesson_id));
+        CREATE TABLE IF NOT EXISTS replay_receipts(
+            event_id INTEGER PRIMARY KEY REFERENCES events(id));
+        CREATE TABLE IF NOT EXISTS operation_history(
+            id INTEGER PRIMARY KEY,
+            operation TEXT NOT NULL,
+            student_id INTEGER,
+            course_id INTEGER,
+            event_id INTEGER,
+            outcome TEXT NOT NULL,
+            error_code TEXT,
+            before_state TEXT NOT NULL,
+            after_state TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
         ''')
 
 
 def reset(path):
     initialize(path)
     with connect(path) as db:
-        for table in ('progress', 'events', 'quiz_results', 'lessons', 'students', 'courses'):
+        for table in ('operation_history', 'replay_receipts', 'progress', 'events', 'quiz_results', 'lessons', 'students', 'courses'):
             db.execute(f'DELETE FROM {table}')
         db.execute("INSERT INTO courses VALUES (1, 'Learning Foundations')")
         db.executemany('INSERT INTO students VALUES (?, ?)',

@@ -4,6 +4,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from learnflow.db import connect, initialize
+from learnflow.pipeline import recompute, stored, log_operation
 
 
 class Completion(BaseModel):
@@ -20,31 +21,10 @@ def require(db, table, identifier):
         raise HTTPException(404, f'{table} record not found')
 
 
-def recompute(db, student_id):
-    # Only explicitly processed evidence participates in this projection.
-    previous_complete = True
-    for lesson in db.execute('SELECT * FROM lessons ORDER BY course_id, position').fetchall():
-        if lesson['position'] == 1:
-            previous_complete = True
-        completion = bool(db.execute('''SELECT 1 FROM events WHERE student_id = ?
-            AND lesson_id = ? AND kind = 'lesson_completed' AND processed_at IS NOT NULL''',
-            (student_id, lesson['id'])).fetchone())
-        passed = bool(db.execute('''SELECT 1 FROM events e JOIN quiz_results q ON q.id = e.quiz_result_id
-            WHERE e.student_id = ? AND e.lesson_id = ? AND e.processed_at IS NOT NULL
-            AND q.score >= ?''', (student_id, lesson['id'], lesson['passing_score'])).fetchone())
-        completed = previous_complete and completion and passed
-        db.execute('''INSERT INTO progress VALUES (?, ?, ?, ?, ?, ?)
-            ON CONFLICT(student_id, lesson_id) DO UPDATE SET
-            completion_seen=excluded.completion_seen, quiz_passed=excluded.quiz_passed,
-            eligible=excluded.eligible, completed=excluded.completed''',
-            (student_id, lesson['id'], completion, passed, previous_complete, completed))
-        previous_complete = completed
-
-
 def create_app(db_path=None):
     path = db_path or os.environ.get('LEARNFLOW_DB', 'learnflow.sqlite3')
     initialize(path)
-    app = FastAPI(title='LearnFlow Recovery — Milestone 1')
+    app = FastAPI(title='LearnFlow Recovery â€” Milestone 1')
 
     @app.get('/lessons')
     def lessons():
@@ -95,9 +75,13 @@ def create_app(db_path=None):
             db.execute('BEGIN IMMEDIATE')
             require(db, 'events', event_id)
             event = db.execute('SELECT * FROM events WHERE id = ?', (event_id,)).fetchone()
+            course_id = db.execute('SELECT course_id FROM lessons WHERE id=?', (event['lesson_id'],)).fetchone()[0]
+            before = stored(db, event['student_id'], course_id)
             already_processed = event['processed_at'] is not None
             db.execute('UPDATE events SET processed_at = CURRENT_TIMESTAMP WHERE id = ? AND processed_at IS NULL', (event_id,))
             recompute(db, event['student_id'])
+            log_operation(db, 'process_event', event['student_id'], course_id, before,
+                          stored(db, event['student_id'], course_id), event_id=event_id)
             return {'event_id': event_id, 'already_processed': already_processed}
 
     @app.get('/students/{student_id}/progress')
