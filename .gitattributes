@@ -1,0 +1,2 @@
+evaluation/manifests/*.json text eol=lf
+evaluation/manifests/*.sha256 text eol=lf

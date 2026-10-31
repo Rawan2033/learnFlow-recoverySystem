@@ -1,4 +1,4 @@
-# LearnFlow Recovery — milestones 1–5
+# LearnFlow Recovery — milestones 1–6
 
 A local, synthetic learning platform for an AI hackathon. This milestone provides
 the backend evidence-to-progress pipeline, reproducible developer scenarios,
@@ -771,3 +771,31 @@ before/after state, post-run read-only refetch, uninitialized/error states, and
 mobile layout. These results are offline checks, not live AI results. No paid API
 call was made for this implementation; the new web-to-live-model path remains
 unverified. The earlier live development results do not establish frontend behavior.
+
+## Milestone 6: reproducible evaluation
+
+The developer-only harness compares replay-only, deterministic rule-based, and
+the unchanged real AI agent through the same scoped host/tool gates. It includes
+12 development cases, a frozen 24-case held-out manifest, a separate 3-case
+robustness manifest, an independent outcome oracle, provenance, JSON/CSV metrics,
+and safe resume without repeating completed or interrupted paid attempts.
+
+Run only the offline development baselines:
+
+```powershell
+$evaluationRun = ".traces/evaluation/development-$([guid]::NewGuid().ToString('N'))"
+.\.venv\Scripts\python.exe -m learnflow.evaluation --split development --methods replay rule --max-cases 12 --output $evaluationRun
+Get-Content "$evaluationRun/summary.md"
+```
+
+Development results: rule-based repair 8/8, replay-only 2/8; both healthy no-action
+4/4 and source/unrelated preservation 12/12. No paid or held-out evaluation was
+executed. See [docs/evaluation.md](docs/evaluation.md) for metric denominators,
+limitations, frozen splits, interruption handling, and explicitly opt-in future
+live commands. Mocked AI adapter tests are not live AI evaluation results.
+
+For submission, use [docs/submission.md](docs/submission.md): it gives the exact
+Combined demo steps (choosing the menu item is not loading it), confirmed scope
+and evidence checks, and the frozen 24-case commands for all three methods.
+Submission checks: 166 offline Python tests, production frontend build, and
+6 mocked browser tests passed. No held-out or paid evaluation was executed.

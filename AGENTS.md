@@ -3,7 +3,7 @@
 Build a simulated learning platform for an AI hackathon. The recovery
 agent will diagnose and repair incorrect derived learning progress.
 
-Current scope includes milestones 1–5: Python, FastAPI, SQLite, and pytest; one synthetic
+Current scope includes milestones 1–6: Python, FastAPI, SQLite, and pytest; one synthetic
 course, three sequential lessons, synthetic students, stored source evidence,
 explicit deterministic processing, diagnostics, verification, controlled recovery,
 an independently persisted learner-view cache, and an opt-in OpenAI investigation agent.
@@ -137,3 +137,27 @@ API integration tests inject scripted models; browser tests mock API responses
 and identify them as mocked. Neither establishes live frontend/model behavior.
 Keep `.local-demo/`, frontend build/dependency/browser artifacts, `.env`, generated
 databases and local traces out of Git. Preserve earlier smoke-run artifacts.
+
+## Evaluation boundaries
+
+`learnflow/evaluation.py`, `learnflow/eval_support/` and `evaluation/manifests/`
+are privileged developer infrastructure, never model-accessible tools. Keep
+fixtures, labels, reference outcomes and scoring annotations out of prompts and
+tool responses. All evaluation methods must use the unmodified Investigator,
+same scoped allowlist, mutation preconditions, budgets and verification gates.
+Do not tune the agent during milestone 6. The independent oracle must not call
+production processing/recovery/verification; freeze expectations before a method
+runs so source changes cannot redefine correctness.
+
+Use a fresh database for every case/method/repetition. Preserve failed and
+interrupted attempts and previous application/smoke databases. Resume must never
+repeat a started paid attempt, change its settings, or overwrite completed results.
+Live AI requires explicit `--allow-paid` and `--max-cases`; stop API failures
+without retries. Record provenance and distinguish model proposals from accepted
+reports and independent outcomes. Mocked tests are not AI evaluation results.
+
+The 24-case held-out manifest is frozen by `heldout.sha256`. Do not execute it,
+including baselines, as routine validation or during this milestone. Static split
+validation is permitted; runtime validation uses development fixtures only.
+Future held-out execution requires `--unlock-heldout`. Never tune on held-out
+results and then describe the same set as unseen. See `docs/evaluation.md`.

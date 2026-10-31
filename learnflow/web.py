@@ -186,7 +186,11 @@ class DemoService:
                 raise HTTPException(409, 'Cannot reset demo data while an investigation is active')
             from learnflow.scenarios import setup
             setup(self.db_path, name)
-            return {'student_id': 1, 'course_id': 1, 'message': 'Dedicated synthetic demo data reset'}
+            tools = RecoveryTools(self.db_path)
+            diagnostic = tools.inspect(1, 1)
+            return {'student_id': 1, 'course_id': 1, 'message': 'Dedicated synthetic demo data reset',
+                    'evidence_counts': {'events': len(diagnostic['events']), 'quiz_results': len(diagnostic['quiz_results'])},
+                    'verification': tools.verify_end_to_end(1, 1)}
 
 
 def create_app(demo_mode=False, demo_root=None, settings_loader=None, model_factory=None):

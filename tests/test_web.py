@@ -180,3 +180,27 @@ def test_config_error_before_run_and_marked_workspace_protection(tmp_path):
     with pytest.raises(ValueError, match='unmarked'):
         create_app(True,old,settings,ModelFactory())
     assert (old/'learning.sqlite3').read_bytes() == b'previous smoke evidence'
+
+
+def test_combined_load_response_confirms_actual_evidence_scope_and_isolated_database(tmp_path, monkeypatch):
+    previous = tmp_path/'previous-smoke.sqlite3'
+    previous.write_bytes(b'preserve previous smoke database')
+    monkeypatch.setenv('LEARNFLOW_DB', str(previous))
+    def forbidden():
+        pytest.fail('Loading a scenario must not configure or call a paid model')
+    app = create_app(True, tmp_path/'dedicated-demo', forbidden)
+    client = TestClient(app, base_url='http://127.0.0.1:8000')
+    assert client.get('/events').json() == []
+    loaded = client.post('/web/demo/scenario', json={'scenario':'combined'})
+    assert loaded.status_code == 200
+    body = loaded.json()
+    assert (body['student_id'], body['course_id']) == (1, 1)
+    assert body['evidence_counts'] == {'events':2, 'quiz_results':1}
+    assert body['verification']['progress']['consistent'] is False
+    assert body['verification']['learner_view']['consistent'] is False
+    assert [(e['student_id'],e['lesson_id'],e['kind']) for e in client.get('/events').json()] == [
+        (1,1,'lesson_completed'), (1,1,'quiz_recorded')]
+    assert client.get('/quiz-results').json()[0]['score'] == 90
+    assert client.get('/students/1/courses/1/learner-view').json()['lessons'][1]['eligible'] == 0
+    assert app.state.demo_service.runs == {}
+    assert previous.read_bytes() == b'preserve previous smoke database'

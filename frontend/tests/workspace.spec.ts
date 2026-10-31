@@ -8,7 +8,7 @@ const good={consistent:true,mismatches:[]};const bad={consistent:false,mismatche
 const snapshot={progress:earnedRows,learner_view:view,verification:{consistent:false,progress:good,learner_view:bad,browser_ui_verified:false}};
 
 async function mockBackend(page:Page, options:{uninitialized?:boolean;error?:boolean}={}){
-  const state={posts:[] as {path:string;body:Record<string,unknown>}[],complete:false,started:false,authoritativeReads:0};
+  const state={posts:[] as {path:string;body:Record<string,unknown>}[],complete:false,started:false,loaded:false,authoritativeReads:0};
   await page.route('**/api/**',async route=>{
     const path=new URL(route.request().url()).pathname.replace('/api','');
     if(route.request().method()==='POST')state.posts.push({path,body:route.request().postDataJSON()});
@@ -18,10 +18,14 @@ async function mockBackend(page:Page, options:{uninitialized?:boolean;error?:boo
     else if(path==='/lessons')data=lessons;
     else if(path==='/web/config')data={demo_mode:true,paid_investigations:true,execution_mode:'mocked_test'};
     else if(path==='/web/runs/active')data={run:null};
+    else if(path==='/web/demo/scenario'){
+      state.loaded=true;state.complete=false;
+      data={student_id:1,course_id:1,evidence_counts:{events:2,quiz_results:1},verification:{consistent:false,progress:bad,learner_view:bad,browser_ui_verified:false}};
+    }
     else if(path==='/students/1/progress'){state.authoritativeReads++;data={lessons:earnedRows};}
     else if(path.endsWith('/learner-view')){
       if(options.error){await route.fulfill({status:503,json:{detail:'Mocked learner-view outage'}});return;}
-      data=options.uninitialized?{...view,initialized:false,version:0,lessons:[],course_completed:null}:state.complete?{...view,version:2,lessons:earnedRows}:view;
+      data=options.uninitialized?{...view,initialized:false,version:0,lessons:[],course_completed:null}:state.complete?{...view,version:2,lessons:earnedRows}:state.loaded?{...view,lessons:earnedRows.map(r=>({...r,eligible:r.lesson_id===2?0:r.eligible}))}:view;
     }else if(path==='/web/runs'||path==='/web/runs/mock-run'){
       state.started=true;
       const finished=state.complete;
@@ -83,4 +87,36 @@ test('read errors and mobile layout do not launch investigations',async({page})=
   await page.getByRole('button',{name:'Try reading again'}).click();
   expect(state.posts).toHaveLength(0);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
+});
+
+test('choosing is not applying; loading combined confirms scope and evidence without paid calls',async({page})=>{
+  const state=await mockBackend(page);await page.goto('/');
+  await expect(page.locator('.scenario-readiness')).toContainText('Selection only');
+  await page.getByLabel('Learner',{exact:true}).selectOption('2');
+  await page.getByLabel('Development scenario').selectOption('stale-view');
+  await page.getByLabel('Development scenario').selectOption('combined');
+  expect(state.posts).toHaveLength(0);
+  await page.getByRole('button',{name:'Load scenario'}).click();
+  await expect(page.locator('.scenario-readiness')).toContainText('Loaded in this tab: Combined faults');
+  await expect(page.locator('.scenario-readiness')).toContainText('Student 1, course 1');
+  await expect(page.locator('.scenario-readiness')).toContainText('2 events, 1 quiz results');
+  await expect(page.locator('.scenario-readiness')).toContainText('Progress mismatch; learner view mismatch');
+  await expect(page.getByLabel('Learner',{exact:true})).toHaveValue('1');
+  await expect(page.getByLabel('Course',{exact:true})).toHaveValue('1');
+  await expect(page.locator('.lesson-card').nth(1).getByText('Locked',{exact:true})).toBeVisible();
+  expect(state.posts).toEqual([{path:'/web/demo/scenario',body:{scenario:'combined'}}]);
+});
+
+test('changing scenario choice clears a finished report and paid consent without applying it',async({page})=>{
+  const state=await mockBackend(page);state.complete=true;await page.goto('/');
+  await page.getByRole('button',{name:'Recovery console'}).click();
+  await page.getByRole('checkbox').check();await page.getByRole('button',{name:'Investigate with AI'}).click();
+  await expect(page.getByText('Mocked test result: the saved view was refreshed.')).toBeVisible();
+  await page.getByRole('checkbox').check();
+  await page.getByLabel('Development scenario').selectOption('healthy-control');
+  await expect(page.getByText('Mocked test result: the saved view was refreshed.')).toHaveCount(0);
+  await expect(page.getByRole('checkbox')).not.toBeChecked();
+  await expect(page.locator('.scenario-readiness')).toContainText('Selection only');
+  await expect(page.getByRole('button',{name:'Investigate with AI'})).toBeDisabled();
+  expect(state.posts).toHaveLength(1);expect(state.posts[0].path).toBe('/web/runs');
 });

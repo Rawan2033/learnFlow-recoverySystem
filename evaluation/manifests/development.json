@@ -1,0 +1,125 @@
+{
+  "version": 1,
+  "split": "development",
+  "symptom": "Please investigate why my next lesson is locked.",
+  "cases": [
+    {
+      "id": "dev-01",
+      "family": "missed-processing",
+      "student": 1,
+      "lesson": 1,
+      "scores": [
+        70
+      ]
+    },
+    {
+      "id": "dev-02",
+      "family": "missed-processing",
+      "student": 2,
+      "lesson": 3,
+      "scores": [
+        35,
+        71
+      ]
+    },
+    {
+      "id": "dev-03",
+      "family": "partial-update",
+      "student": 2,
+      "lesson": 1,
+      "scores": [
+        71
+      ]
+    },
+    {
+      "id": "dev-04",
+      "family": "partial-update",
+      "student": 3,
+      "lesson": 2,
+      "scores": [
+        69,
+        70
+      ],
+      "duplicates": 1
+    },
+    {
+      "id": "dev-05",
+      "family": "stale-view",
+      "student": 3,
+      "lesson": 1,
+      "scores": [
+        100
+      ]
+    },
+    {
+      "id": "dev-06",
+      "family": "stale-view",
+      "student": 1,
+      "lesson": 3,
+      "scores": [
+        70,
+        0
+      ]
+    },
+    {
+      "id": "dev-07",
+      "family": "combined",
+      "student": 1,
+      "lesson": 1,
+      "scores": [
+        70
+      ]
+    },
+    {
+      "id": "dev-08",
+      "family": "combined",
+      "student": 2,
+      "lesson": 2,
+      "scores": [
+        69,
+        71
+      ],
+      "duplicates": 1
+    },
+    {
+      "id": "dev-09",
+      "family": "healthy-control",
+      "student": 1,
+      "lesson": 1,
+      "scores": [
+        69
+      ]
+    },
+    {
+      "id": "dev-10",
+      "family": "healthy-control",
+      "student": 2,
+      "lesson": 2,
+      "scores": [
+        0,
+        69
+      ],
+      "downstream_evidence": true
+    },
+    {
+      "id": "dev-11",
+      "family": "healthy-control",
+      "student": 3,
+      "lesson": 3,
+      "scores": [
+        100
+      ],
+      "activity": false
+    },
+    {
+      "id": "dev-12",
+      "family": "healthy-control",
+      "student": 1,
+      "lesson": 3,
+      "scores": [
+        100
+      ],
+      "missing_prerequisite": true
+    }
+  ]
+}

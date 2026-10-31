@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "split": "robustness",
+  "symptom": "Please investigate why my next lesson is locked.",
+  "cases": [
+    {
+      "id": "robust-01",
+      "family": "missed-processing",
+      "student": 2,
+      "lesson": 2,
+      "scores": [
+        70
+      ],
+      "failure_tool": "recover"
+    },
+    {
+      "id": "robust-02",
+      "family": "stale-view",
+      "student": 3,
+      "lesson": 2,
+      "scores": [
+        71
+      ],
+      "failure_tool": "refresh_view"
+    },
+    {
+      "id": "robust-03",
+      "family": "combined",
+      "student": 1,
+      "lesson": 2,
+      "scores": [
+        100
+      ],
+      "failure_tool": "verify_end_to_end"
+    }
+  ]
+}

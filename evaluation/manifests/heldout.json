@@ -1,0 +1,292 @@
+{
+  "version": 1,
+  "split": "heldout",
+  "symptom": "Please investigate why my next lesson is locked.",
+  "cases": [
+    {
+      "id": "held-01",
+      "family": "missed-processing",
+      "student": 1,
+      "lesson": 1,
+      "scores": [
+        69,
+        70,
+        69
+      ],
+      "duplicates": 0,
+      "downstream_evidence": true
+    },
+    {
+      "id": "held-02",
+      "family": "missed-processing",
+      "student": 2,
+      "lesson": 2,
+      "scores": [
+        0,
+        71
+      ],
+      "duplicates": 1,
+      "downstream_evidence": false
+    },
+    {
+      "id": "held-03",
+      "family": "missed-processing",
+      "student": 3,
+      "lesson": 3,
+      "scores": [
+        71,
+        69
+      ],
+      "duplicates": 0,
+      "downstream_evidence": false
+    },
+    {
+      "id": "held-04",
+      "family": "missed-processing",
+      "student": 1,
+      "lesson": 1,
+      "scores": [
+        100,
+        0,
+        70
+      ],
+      "duplicates": 1,
+      "downstream_evidence": false
+    },
+    {
+      "id": "held-05",
+      "family": "partial-update",
+      "student": 2,
+      "lesson": 1,
+      "scores": [
+        69,
+        70,
+        69
+      ],
+      "duplicates": 0,
+      "downstream_evidence": true
+    },
+    {
+      "id": "held-06",
+      "family": "partial-update",
+      "student": 3,
+      "lesson": 2,
+      "scores": [
+        0,
+        71
+      ],
+      "duplicates": 1,
+      "downstream_evidence": false
+    },
+    {
+      "id": "held-07",
+      "family": "partial-update",
+      "student": 1,
+      "lesson": 1,
+      "scores": [
+        71,
+        69
+      ],
+      "duplicates": 0,
+      "downstream_evidence": false
+    },
+    {
+      "id": "held-08",
+      "family": "partial-update",
+      "student": 2,
+      "lesson": 2,
+      "scores": [
+        100,
+        0,
+        70
+      ],
+      "duplicates": 1,
+      "downstream_evidence": false
+    },
+    {
+      "id": "held-09",
+      "family": "stale-view",
+      "student": 3,
+      "lesson": 1,
+      "scores": [
+        69,
+        70,
+        69
+      ],
+      "duplicates": 0,
+      "downstream_evidence": true
+    },
+    {
+      "id": "held-10",
+      "family": "stale-view",
+      "student": 1,
+      "lesson": 2,
+      "scores": [
+        0,
+        71
+      ],
+      "duplicates": 1,
+      "downstream_evidence": false
+    },
+    {
+      "id": "held-11",
+      "family": "stale-view",
+      "student": 2,
+      "lesson": 3,
+      "scores": [
+        71,
+        69
+      ],
+      "duplicates": 0,
+      "downstream_evidence": false
+    },
+    {
+      "id": "held-12",
+      "family": "stale-view",
+      "student": 3,
+      "lesson": 1,
+      "scores": [
+        100,
+        0,
+        70
+      ],
+      "duplicates": 1,
+      "downstream_evidence": false
+    },
+    {
+      "id": "held-13",
+      "family": "combined",
+      "student": 1,
+      "lesson": 1,
+      "scores": [
+        69,
+        70,
+        69
+      ],
+      "duplicates": 0,
+      "downstream_evidence": true
+    },
+    {
+      "id": "held-14",
+      "family": "combined",
+      "student": 2,
+      "lesson": 2,
+      "scores": [
+        0,
+        71
+      ],
+      "duplicates": 1,
+      "downstream_evidence": false
+    },
+    {
+      "id": "held-15",
+      "family": "combined",
+      "student": 3,
+      "lesson": 3,
+      "scores": [
+        71,
+        69
+      ],
+      "duplicates": 0,
+      "downstream_evidence": false
+    },
+    {
+      "id": "held-16",
+      "family": "combined",
+      "student": 1,
+      "lesson": 1,
+      "scores": [
+        100,
+        0,
+        70
+      ],
+      "duplicates": 1,
+      "downstream_evidence": false
+    },
+    {
+      "id": "held-17",
+      "family": "healthy-control",
+      "student": 3,
+      "lesson": 1,
+      "scores": [
+        0,
+        68
+      ],
+      "duplicates": 1
+    },
+    {
+      "id": "held-18",
+      "family": "healthy-control",
+      "student": 1,
+      "lesson": 2,
+      "scores": [
+        69,
+        20
+      ],
+      "downstream_evidence": true
+    },
+    {
+      "id": "held-19",
+      "family": "healthy-control",
+      "student": 2,
+      "lesson": 3,
+      "scores": [
+        68,
+        69
+      ]
+    },
+    {
+      "id": "held-20",
+      "family": "healthy-control",
+      "student": 2,
+      "lesson": 1,
+      "scores": [
+        70
+      ],
+      "activity": false
+    },
+    {
+      "id": "held-21",
+      "family": "healthy-control",
+      "student": 1,
+      "lesson": 2,
+      "scores": [
+        71
+      ],
+      "activity": false,
+      "duplicates": 1
+    },
+    {
+      "id": "held-22",
+      "family": "healthy-control",
+      "student": 3,
+      "lesson": 3,
+      "scores": [
+        100
+      ],
+      "linked": false
+    },
+    {
+      "id": "held-23",
+      "family": "healthy-control",
+      "student": 2,
+      "lesson": 2,
+      "scores": [
+        70,
+        100
+      ],
+      "linked": false
+    },
+    {
+      "id": "held-24",
+      "family": "healthy-control",
+      "student": 3,
+      "lesson": 2,
+      "scores": [
+        71
+      ],
+      "missing_prerequisite": true,
+      "downstream_evidence": true
+    }
+  ]
+}
