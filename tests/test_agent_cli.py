@@ -24,8 +24,9 @@ def test_cli_with_mocked_model_and_offline_trace(tmp_path, monkeypatch, capsys):
     monkeypatch.setenv('OPENAI_MODEL', 'test-model')
     turns = iter([
         ModelTurn(calls=[ToolCall('c1', 'inspect', '{}')]),
-        ModelTurn(calls=[ToolCall('c2', 'verify', '{}')]),
-        ModelTurn(text=json.dumps({'status': 'no_fault_found', 'evidence_references': ['tool-0001', 'tool-0002'],
+        ModelTurn(calls=[ToolCall('c2', 'inspect_view', '{}')]),
+        ModelTurn(calls=[ToolCall('c3', 'verify_end_to_end', '{}')]),
+        ModelTurn(text=json.dumps({'status': 'no_fault_found', 'evidence_references': ['tool-0001', 'tool-0002', 'tool-0003'],
                                   'diagnosis': 'The failed quiz correctly prevents completion.',
                                   'remaining_limitations': [], 'recommended_next_steps': []})),
     ])
@@ -41,6 +42,8 @@ def test_cli_with_mocked_model_and_offline_trace(tmp_path, monkeypatch, capsys):
                    '--symptom', 'Locked lesson', '--trace-file', str(trace), '--env-file', str(tmp_path/'missing.env')])
     output = capsys.readouterr().out
     assert result == 0 and json.loads(output)['report']['status'] == 'no_fault_found'
+    assert json.loads(output)['report']['verification_scope'] == 'learner_view'
+    assert json.loads(output)['report']['verification_outcome']['consistent'] is True
     assert 'unit-test-credential' not in output + trace.read_text()
     assert main(['trace', '--file', str(trace)]) == 0
     assert 'no_fault_found' in capsys.readouterr().out

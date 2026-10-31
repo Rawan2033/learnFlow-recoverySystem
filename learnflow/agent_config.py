@@ -46,7 +46,7 @@ class Settings:
             limits = Limits(
                 max_turns=int(os.environ.get('LEARNFLOW_MAX_TURNS', '10')),
                 max_tool_calls=int(os.environ.get('LEARNFLOW_MAX_TOOL_CALLS', '20')),
-                max_repairs=int(os.environ.get('LEARNFLOW_MAX_REPAIRS', '1')),
+                max_repairs=int(os.environ.get('LEARNFLOW_MAX_REPAIRS', '2')),
                 request_timeout=float(os.environ.get('LEARNFLOW_REQUEST_TIMEOUT', '30')),
                 max_output_tokens=int(os.environ.get('LEARNFLOW_MAX_OUTPUT_TOKENS', '4096')),
             )

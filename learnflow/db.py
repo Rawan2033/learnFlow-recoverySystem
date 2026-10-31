@@ -47,6 +47,14 @@ def initialize(path):
             PRIMARY KEY(student_id, lesson_id));
         CREATE TABLE IF NOT EXISTS replay_receipts(
             event_id INTEGER PRIMARY KEY REFERENCES events(id));
+        CREATE TABLE IF NOT EXISTS learner_views(
+            student_id INTEGER NOT NULL REFERENCES students(id),
+            course_id INTEGER NOT NULL REFERENCES courses(id),
+            version INTEGER NOT NULL CHECK(version > 0),
+            payload TEXT NOT NULL,
+            progress_fingerprint TEXT NOT NULL,
+            refreshed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY(student_id, course_id));
         CREATE TABLE IF NOT EXISTS operation_history(
             id INTEGER PRIMARY KEY,
             operation TEXT NOT NULL,
@@ -64,7 +72,7 @@ def initialize(path):
 def reset(path):
     initialize(path)
     with connect(path) as db:
-        for table in ('operation_history', 'replay_receipts', 'progress', 'events', 'quiz_results', 'lessons', 'students', 'courses'):
+        for table in ('operation_history', 'learner_views', 'replay_receipts', 'progress', 'events', 'quiz_results', 'lessons', 'students', 'courses'):
             db.execute(f'DELETE FROM {table}')
         db.execute("INSERT INTO courses VALUES (1, 'Learning Foundations')")
         db.executemany('INSERT INTO students VALUES (?, ?)',
@@ -73,3 +81,7 @@ def reset(path):
                        [(1, 1, 'Getting Started'), (2, 2, 'Practice'), (3, 3, 'Apply Your Skills')])
         db.execute('''INSERT INTO progress(student_id, lesson_id, eligible)
                       SELECT s.id, l.id, l.position = 1 FROM students s CROSS JOIN lessons l''')
+        # Initial snapshots are seed state, not processing or recovery attempts.
+        from learnflow.learner_view import refresh
+        for student_id in (1, 2, 3):
+            refresh(db, student_id, 1, audit=False)

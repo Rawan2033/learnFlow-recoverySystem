@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 
 from learnflow.db import connect, initialize
 from learnflow.pipeline import recompute, stored, log_operation
+from learnflow import learner_view
 
 
 class Completion(BaseModel):
@@ -79,9 +80,11 @@ def create_app(db_path=None):
             before = stored(db, event['student_id'], course_id)
             already_processed = event['processed_at'] is not None
             db.execute('UPDATE events SET processed_at = CURRENT_TIMESTAMP WHERE id = ? AND processed_at IS NULL', (event_id,))
-            recompute(db, event['student_id'])
+            recompute(db, event['student_id'], course_id)
             log_operation(db, 'process_event', event['student_id'], course_id, before,
                           stored(db, event['student_id'], course_id), event_id=event_id)
+            # Explicit, separately audited projection -> learner snapshot step.
+            learner_view.refresh(db, event['student_id'], course_id)
             return {'event_id': event_id, 'already_processed': already_processed}
 
     @app.get('/students/{student_id}/progress')
@@ -92,5 +95,12 @@ def create_app(db_path=None):
                 JOIN lessons l ON l.id = p.lesson_id WHERE student_id = ? ORDER BY l.position''', (student_id,))]
             return {'student_id': student_id, 'course_completed': bool(rows) and all(r['completed'] for r in rows),
                     'lessons': rows}
+
+    @app.get('/students/{student_id}/courses/{course_id}/learner-view')
+    def cached_progress(student_id: int, course_id: int):
+        with connect(path) as db:
+            require(db, 'students', student_id)
+            require(db, 'courses', course_id)
+            return learner_view.read(db, student_id, course_id)
 
     return app

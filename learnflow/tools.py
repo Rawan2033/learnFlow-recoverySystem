@@ -6,6 +6,7 @@ import sqlite3
 
 from learnflow.db import connect
 from learnflow.pipeline import FIELDS, expected, stored, recompute, log_operation
+from learnflow import learner_view
 
 
 def validate(db, student_id, course_id):
@@ -81,6 +82,47 @@ class RecoveryTools:
             validate(db, student_id, course_id)
             return verification(db, student_id, course_id)
 
+    def inspect_view(self, student_id, course_id):
+        with connect(self.db_path) as db:
+            db.execute('BEGIN')
+            validate(db, student_id, course_id)
+            return learner_view.read(db, student_id, course_id)
+
+    def verify_end_to_end(self, student_id, course_id):
+        with connect(self.db_path) as db:
+            db.execute('BEGIN')
+            validate(db, student_id, course_id)
+            progress = verification(db, student_id, course_id)
+            view = learner_view.verify(db, student_id, course_id)
+            return {'student_id': student_id, 'course_id': course_id,
+                    'verification_scope': 'simulated_learner_view',
+                    'consistent': progress['consistent'] and view['consistent'],
+                    'progress': progress, 'learner_view': view,
+                    'comparison_references': {
+                        'progress': {'actual': 'stored_derived_progress',
+                                     'expected': 'authoritative_activity_and_quiz_evidence_evaluated_with_course_rules'},
+                        'learner_view': {'actual': 'persisted_learner_view',
+                                         'expected': 'stored_derived_progress_which_may_be_incorrect'}},
+                    'interpretation': 'Learner-view agreement alone does not establish correctness. Both progress and learner_view checks must pass.',
+                    'browser_ui_verified': False}
+
+    def refresh_view(self, student_id, course_id):
+        with connect(self.db_path) as db:
+            db.execute('BEGIN IMMEDIATE')
+            validate(db, student_id, course_id)
+            before = learner_view.read(db, student_id, course_id)
+            db.execute('SAVEPOINT cache_refresh')
+            try:
+                result = learner_view.refresh(db, student_id, course_id)
+            except sqlite3.Error:
+                db.execute('ROLLBACK TO cache_refresh')
+                audit_id = log_operation(db, 'refresh_learner_view', student_id, course_id,
+                                         before, before, 'error', 'database_error')
+                result = {'student_id': student_id, 'course_id': course_id, 'outcome': 'error',
+                          'error_code': 'database_error', 'changed': False, 'audit_id': audit_id}
+            db.execute('RELEASE cache_refresh')
+            return result
+
     def recover(self, student_id, course_id):
         with connect(self.db_path) as db:
             db.execute('BEGIN IMMEDIATE')
@@ -112,7 +154,8 @@ class RecoveryTools:
 
 def main():
     parser = argparse.ArgumentParser(description='Structured diagnostics and controlled recovery')
-    parser.add_argument('operation', choices=['inspect', 'verify', 'recover'])
+    parser.add_argument('operation', choices=['inspect', 'verify', 'recover', 'inspect_view',
+                                             'refresh_view', 'verify_end_to_end'])
     parser.add_argument('--db', default=os.environ.get('LEARNFLOW_DB', 'learnflow.sqlite3'))
     parser.add_argument('--student', type=int, required=True)
     parser.add_argument('--course', type=int, required=True)

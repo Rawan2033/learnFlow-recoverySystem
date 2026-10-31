@@ -55,7 +55,7 @@ def main(argv=None):
         from learnflow.openai_provider import OpenAIResponsesModel
         model = OpenAIResponsesModel(settings, INSTRUCTIONS)
         report = Investigator(model, RecoveryTools(args.db), writer, args.student, args.course,
-                              settings.limits, redact).run(args.symptom)
+                              settings.limits, redact, verification_scope='learner_view').run(args.symptom)
         print(json.dumps(redact({'trace_file': path, 'report': report}), indent=2))
         return 0 if report['status'] in ('recovered', 'no_fault_found') else 1
     except ConfigurationError as exc:
