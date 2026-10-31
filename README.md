@@ -1,9 +1,10 @@
-# LearnFlow Recovery — milestones 1–4
+# LearnFlow Recovery — milestones 1–5
 
 A local, synthetic learning platform for an AI hackathon. This milestone provides
 the backend evidence-to-progress pipeline, reproducible developer scenarios,
 diagnostics, verification, controlled recovery, and an opt-in OpenAI investigation
-agent, plus a persisted learner-view cache. All students are synthetic. There is no frontend. Only opted-in agent
+agent, a persisted learner-view cache, and a local React/TypeScript dashboard and
+recovery console. All students are synthetic. Only opted-in agent
 investigations use an external service; the backend and routine tests run locally.
 
 ## Setup and run
@@ -634,7 +635,7 @@ source preservation, and cache failure rollback coverage.
 The development runner also has offline tests for isolation, expected choices,
 preservation failures, API failures, stop/no-retry behavior, usage summaries,
 configuration preflight, explicit opt-in and CLI output.
-Implementation validation: **129 local tests passed**, retaining the existing 63
+Milestone 4 validation: **129 local tests passed**, retaining the existing 63
 tests (SDK tool-list and CLI mock contracts extended for learner scope), including all 20 existing
 milestone 1/2 tests. The installed Starlette/httpx combination emits one existing
 test-client deprecation warning. This is not a live-model evaluation result.
@@ -642,16 +643,131 @@ test-client deprecation warning. This is not a live-model evaluation result.
 ## Remaining limitations
 
 This is a local simulator without authentication, enrollment, pagination,
-background workers, schema migrations, ingestion deduplication, or production
+durable background jobs, schema migrations, ingestion deduplication, or production
 deployment hardening. Quiz scores are synthetic inputs, not a quiz grading
 service. SQLite and full student projection recalculation suit this small demo.
 The simulator trusts callers to submit source evidence; future recovery-agent
 access must be narrower than simulator ingestion access. See AGENTS.md for
 mandatory recovery boundaries. The three initial milestone 3 live development
-checks were reported successful; milestone 4 live model choices remain unverified.
-No hidden evaluation datasets or frontend is included. The cache has no TTL,
-worker, automatic read-through repair, or browser/UI validation. Content consistency
+checks and the subsequent milestone 4 combined rerun were reported successful.
+No hidden evaluation dataset is included. The cache has no TTL,
+worker or automatic read-through repair. Backend consistency
 does not prove that an actual learner complaint was resolved.
 Verification and processing share
 the deterministic rule implementation; tests supply independent explicit expected
 outcomes. Logs are local operational records, not tamper-proof external audits.
+
+## Milestone 5: local student dashboard and recovery console
+
+Use Node.js 20.19+ (or 22.12+) and the Python environment above. Run the following
+from the repository root in **PowerShell terminal 1**:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+# Create only if absent; edit locally, never paste a key into a command or frontend file.
+if (!(Test-Path .env)) { Copy-Item .env.example .env }
+notepad .env
+# Set OPENAI_API_KEY and OPENAI_MODEL in that local file for paid investigations.
+$env:LEARNFLOW_DEMO_MODE = "1"
+$env:LEARNFLOW_MAX_REPAIRS = "2"
+.\.venv\Scripts\python.exe -m learnflow.serve_demo
+```
+
+No credentials are needed to browse/reset the demo. Configuration is loaded only
+after an explicitly approved investigation request; keep API keys entirely on
+the server. Never use a `VITE_` variable for a secret. Existing environment values
+override `.env`. The existing configurable model, timeouts, and tool/turn budgets
+still apply. Two repair attempts support progress repair plus cache refresh.
+
+In **PowerShell terminal 2**, from the repository root:
+
+```powershell
+Set-Location frontend
+npm.cmd ci --offline=false
+npm.cmd run dev
+```
+
+Open **http://127.0.0.1:5173**. Vite proxies `/api` to the loopback FastAPI server
+on port 8000. The backend launcher deliberately uses one worker, no reload, and
+binds only `127.0.0.1`; the frontend also binds loopback. Stop both with Ctrl+C.
+If your machine requires an organizational TLS certificate, configure trusted
+public CA certificates for Node; do not disable certificate verification.
+
+The dashboard reads `/students/{student}/courses/{course}/learner-view`, including
+its persisted version and publication time. Course percentage and lesson status
+come from that cache, even when stale. Activity evidence and quiz requirements
+are shown separately from earned completion. Loading, read errors and unpublished
+views are explicit; reloading does not publish or repair a view.
+
+The clearly labelled demo panel supports `missed-processing`, `partial-update`,
+`healthy-control`, `stale-view`, and `combined`. It resets only the dedicated
+`.local-demo/learning.sqlite3`; it ignores `LEARNFLOW_DB` and leaves previous
+smoke databases and `.traces/` intact. The directory has a purpose marker and an
+unmarked existing directory is rejected. Initial startup seeds this database
+only if absent; later starts preserve it. Existing scenario behavior is reused:
+missed/partial progress faults need progress recovery, stale-view needs cache
+refresh, combined needs both, and healthy-control needs no mutation. Labels and
+expected outcomes never become agent inputs.
+
+For a demonstration, load a scenario, open **Recovery console**, review the
+student/course and symptom, check the paid-consent box, then click
+**Investigate with AI**. This starts one real, paid investigation. Nothing starts
+on page load or scenario selection. The UI disables duplicate submissions and
+resets while active; the backend enforces a single active run and idempotent
+request IDs. A failed paid POST is never automatically repeated.
+
+The incident timeline polls actual redacted trace events: tool requests/results,
+timings, model usage when supplied, and the validated final report. Expand events
+and snapshots for details. Before/after comparisons distinguish authoritative
+evidence versus derived progress from stored progress versus learner view.
+The backend independently verifies afterward. Completion triggers a read-only
+view refetch, never an automatic cache repair. No browser/UI verification is
+claimed by the agent.
+
+Useful API adapters (run/reset endpoints require demo mode; catalogue and config are read-only):
+
+| Operation | Endpoint |
+| --- | --- |
+| List synthetic courses | `GET /courses` |
+| Read demo availability | `GET /web/config` |
+| Reset dedicated demo | `POST /web/demo/scenario` with `{"scenario":"stale-view"}` |
+| Start an approved investigation | `POST /web/runs` with student/course, symptom, `allow_paid:true`, UUID `request_id` |
+| Reconnect to an active run | `GET /web/runs/active` |
+| Poll actual events and report | `GET /web/runs/{id}` |
+
+Per-run files are kept in `.local-demo/runs/{id}/`: `before.json`, `agent.jsonl`,
+`after.json`, and `run.json`. They and the demo database are Git-ignored.
+Completed runs remain available by ID while the server process lives. Restarting
+the process clears the polling registry and idempotency history, not the saved
+artifacts; there is no durable job queue or automatic paid-run resumption.
+Do not restart the server during an investigation. This local simulator has no
+authentication and must not be exposed to a network or run with multiple workers.
+
+### Offline validation
+
+From the repository root:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest -q
+Set-Location frontend
+npm.cmd run build
+npm.cmd run test:browser
+```
+
+Browser tests start their own Vite server on port 5173, so stop the interactive
+frontend first. On Windows they use installed Microsoft Edge; on other systems
+install Playwright Chromium with `npx.cmd playwright install chromium` (use `npx`
+outside Windows). Tests intercept all API requests with explicitly labelled
+mocked responses; they never start a paid investigation. API integration tests
+use the real deterministic domain/orchestration with scripted model responses.
+They cover paid opt-in, scope/schema validation, local boundaries, active reset
+and submission locks, request idempotency, combined recovery, trace snapshots,
+source preservation, unrelated students, safe errors and dedicated database isolation.
+
+Milestone 5 validation: **135 Python tests passed**, including all 129 existing
+tests; the production frontend build and **4 mocked browser tests passed**.
+Browser checks cover stale cached display, explicit consent and polling,
+before/after state, post-run read-only refetch, uninitialized/error states, and
+mobile layout. These results are offline checks, not live AI results. No paid API
+call was made for this implementation; the new web-to-live-model path remains
+unverified. The earlier live development results do not establish frontend behavior.

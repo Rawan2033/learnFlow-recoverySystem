@@ -1,0 +1,16 @@
+/* Keep evidence and operational details readable, including on laptop displays. */
+nav button{font-size:13px}.page-heading p{font-size:13px;color:#6c7f70}
+.lesson-card p{font-size:12px;color:#667c6b}.lesson-card h3{font-size:17px}
+.evidence-chips{font-size:10px;color:#718675}.badge{font-size:10px}
+.hero-copy p{font-size:12px}.hero-meta{font-size:10px}.hero-label{font-size:10px}
+.context-card p,.freshness p,.demo-panel p{font-size:12px;color:#6c806d}
+.demo-panel small{font-size:10px;color:#73866d}.layer-step{font-size:12px}
+.scope-bar label{font-size:10px}.scope-bar select{font-size:13px}.scope-refresh{font-size:11px}
+.saved-label{font-size:10px;color:#718772}.info-strip p{font-size:11px;color:#728573}
+.paid-note p,.consent{font-size:12px}.field-label{font-size:12px}.button{font-size:12px}
+.run-meta,.event-label small,.timeline time{font-size:10px}.event-label{font-size:12px}
+.diagnosis>p,.diagnosis li{font-size:13px}.checks>span{font-size:11px}.checks .badge{font-size:10px}
+table{font-size:10px}thead th{font-size:9px}.footnote{font-size:11px}.muted{font-size:12px}
+.snapshot summary{font-size:11px}.demo-panel select{font-size:12px}.demo-heading{font-size:9px}
+@media(max-width:900px){nav button{font-size:0}.scope-refresh{font-size:0}}
+@media(max-width:570px){.scope-bar select{font-size:11px}.hero-meta{font-size:9px}.evidence-chips{font-size:9px}.checks>span{font-size:10px}table{font-size:9px}}

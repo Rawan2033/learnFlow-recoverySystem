@@ -37,6 +37,11 @@ def create_app(db_path=None):
         with connect(path) as db:
             return [dict(r) for r in db.execute('SELECT * FROM students ORDER BY id')]
 
+    @app.get('/courses')
+    def courses():
+        with connect(path) as db:
+            return [dict(r) for r in db.execute('SELECT * FROM courses ORDER BY id')]
+
     @app.post('/events', status_code=201)
     def completion(body: Completion):
         with connect(path) as db:
